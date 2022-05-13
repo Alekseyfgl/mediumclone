@@ -6,6 +6,9 @@ import { Repository } from 'typeorm';
 import { sign } from 'jsonwebtoken';
 import { JWT_SECRET } from '@app/config';
 import { UserResponseInterface } from '@app/user/types/userResponse.interface';
+import { LoginUserDto } from '@app/user/dto/loginUserDto';
+import { compare } from 'bcrypt';
+
 
 @Injectable()
 export class UserService {
@@ -37,8 +40,6 @@ export class UserService {
 
     Object.assign(newUser, createUserDto);
 
-    console.log('-----newUser------', newUser);
-
     // const user = new UserEntity()
     // const newUser = {
     //     user,
@@ -66,5 +67,45 @@ export class UserService {
         token: this.generateJwt(user),
       },
     };
+  }
+
+  async login(loginUserDto: LoginUserDto): Promise<UserEntity> {
+    const user = await this.userRepository.findOne(
+      {
+        email: loginUserDto.email, // делаем запрос в BD и проверяем есть ли такой пользователь c email в BD
+      },
+      //все это делаем чтобы получить password
+      { select: ['id', 'username', 'email', 'bio', 'image', 'password'] }, //т.к. только здесь нам нужен password, но мы его исключили по умолчанию, то приходится делать селект всех свойств
+    );
+
+    // console.log('---user---', user);
+    // console.log(loginUserDto);
+    // console.log(user);
+
+    //если мы не получили пользователя ---> Error
+    if (!user) {
+      throw new HttpException(
+        'There is no user with this name',
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
+
+
+    const isPasswordCorrect = await compare(
+      loginUserDto.password,
+      user.password,
+    );
+
+
+
+    if (!isPasswordCorrect) {
+      throw new HttpException(
+        'Wrong password try again',
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
+
+    delete user.password; // нам не нужно возвращать пароль пользователя при входе в лич кабинет
+    return user;
   }
 }

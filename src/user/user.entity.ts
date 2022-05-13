@@ -18,7 +18,7 @@ export class UserEntity {
   @Column({ default: '' })
   image: string;
 
-  @Column()
+  @Column({ select: false }) //так мы исключаем пароль по умолчанию
   password: string;
 
   @BeforeInsert()
