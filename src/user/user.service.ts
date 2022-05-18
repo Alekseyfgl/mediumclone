@@ -9,7 +9,6 @@ import { UserResponseInterface } from '@app/user/types/userResponse.interface';
 import { LoginUserDto } from '@app/user/dto/loginUserDto';
 import { compare } from 'bcrypt';
 
-
 @Injectable()
 export class UserService {
   constructor(
@@ -45,14 +44,19 @@ export class UserService {
     //     user,
     //     ...createUserDto,
     // }
-
     return await this.userRepository.save(newUser);
   }
 
+  //поиск user по id
+  findById(id: number): Promise<UserEntity> {
+    return this.userRepository.findOne(id);
+  }
+
+  //создание токена
   generateJwt(user: UserEntity): string {
     return sign(
       {
-        id: user,
+        id: user.id,
         username: user.username,
         email: user.email,
       },
@@ -60,6 +64,7 @@ export class UserService {
     );
   }
 
+  //добавляет токен в ответ для клиента после регистрации + самого user  {username: 'Alex', email: 'msdymail@gmail.com',password: '$2b$10$9Y8PsF/4Cux/g.exW6lXte6VvuMo4H11U87wc3q0.lVsj9ElYZclK',id: 16,bio: '',image: ''}
   buildUserResponse(user: UserEntity): UserResponseInterface {
     return {
       user: {
@@ -90,13 +95,10 @@ export class UserService {
       );
     }
 
-
     const isPasswordCorrect = await compare(
       loginUserDto.password,
       user.password,
     );
-
-
 
     if (!isPasswordCorrect) {
       throw new HttpException(
