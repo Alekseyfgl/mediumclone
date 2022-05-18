@@ -3,17 +3,17 @@ import {
   Controller,
   Post,
   Get,
-  Req,
   UsePipes,
   ValidationPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { UserService } from '@app/user/user.service';
 import { CreateUserDto } from '@app/user/dto/createUser.dto';
 import { UserResponseInterface } from '@app/user/types/userResponse.interface';
 import { LoginUserDto } from '@app/user/dto/loginUserDto';
 import { User } from '@app/user/decorators/user.decarator';
-
 import { UserEntity } from '@app/user/user.entity';
+import { AuthGuard } from '@app/user/guards/auth.guard';
 
 @Controller()
 export class UserController {
@@ -40,8 +40,13 @@ export class UserController {
     return this.userService.buildUserResponse(user);
   }
 
-  //могут заходить только залогиненные пользователи
-  @Get('user')
+  /*этот запрос только для залогиненых пользователей,т.к. токен обязательно должен быть прикреплен к запросу,
+   если токен не прикреплен или не валиден мы должны выбросить ошибку 401
+   но мы не хотим выбрасывать ошибки внутри middleware, т.к. мы зарегистрировали их глобально для абсолютно всех запросов
+   и мы хотим точечно говорить на какие именно Router мы хотим выбрасывать ошибки
+   -------здесь мы получаем текущего пользователя*/
+  @Get('user') // здесь парсим наш токен и получаем текущего пользователя
+  @UseGuards(AuthGuard) // проверяет залогинены мы или нет, то выбрас ошибку
   async currentUser(
     //получаем только id текущего пользователяч
     @User() user: UserEntity,
