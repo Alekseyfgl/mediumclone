@@ -4,6 +4,8 @@ import { CreateArticleDto } from "@app/article/dto/createArticle.dto";
 import { ArticleEntity } from "@app/article/article.entity";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import { ArticleResponseInterface } from "@app/article/types/articleResponse.interface";
+import slugify from "slugify";
 
 @Injectable()
 export class ArticleService {
@@ -16,15 +18,26 @@ export class ArticleService {
     const article = new ArticleEntity();
     Object.assign(article, createArticleDto);
 
-
     if (!article.categoriesList) {
       article.categoriesList = [];
     }
 
-    article.slug= 'fooo';
-
-    article.author = currentUser;
+    article.slug = ArticleService.getSlug(createArticleDto.title)// по slug мы всегда можем найти пост, т.к. он уникален
+    article.author = currentUser; // добавляем ключ с юзером в объект article
 
     return await this.articleRepository.save(article);
+  }
+
+
+  buildArticleResponse(article: ArticleEntity): ArticleResponseInterface {
+    return {article : article}
+  }
+
+  private static getSlug(title: string): string {
+    return slugify(title,{lower: true}) + '-' + ((Math.random() * Math.pow(36,6)) | 0).toString(36)
+  }
+
+  async findBySlug(slug: string): Promise<ArticleEntity> {
+    return await this.articleRepository.findOne({slug})
   }
 }
