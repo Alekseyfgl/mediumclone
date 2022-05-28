@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Post, UseGuards, Param, Delete } from "@nestjs/common";
+import { Body, Controller, Get, Post, UseGuards, Param, Delete, Put, UsePipes, ValidationPipe } from "@nestjs/common";
 import { ArticleService } from "@app/article/article.service";
 import { AuthGuard } from "@app/user/guards/auth.guard";
 import { User } from "@app/user/decorators/user.decarator";
 import { UserEntity } from "@app/user/user.entity";
 import { CreateArticleDto } from "@app/article/dto/createArticle.dto";
 import { ArticleResponseInterface } from "@app/article/types/articleResponse.interface";
+import { DeleteResult } from "typeorm";
 
 @Controller("articles")
 export class ArticleController {
@@ -13,6 +14,7 @@ export class ArticleController {
 
   @Post()
   @UseGuards(AuthGuard)// теперь только зарегистрированный пользователь может сюда зайти
+  @UsePipes(new ValidationPipe())
   async create(@User() currentUser: UserEntity,
                @Body("article") createArticleDto: CreateArticleDto): Promise<ArticleResponseInterface> { //теперь мы должны прочитать текущего пользователя
     const article = await this.articleService.createArticle(currentUser, createArticleDto);
@@ -26,9 +28,19 @@ export class ArticleController {
     return this.articleService.buildArticleResponse(article);
   }
 
-  @UseGuards(AuthGuard)
+
   @Delete(":slug")
-  async deleteArticle(@User("id") currentUserId: number, @Param("slug") slug: string) {
+  @UseGuards(AuthGuard)
+  async deleteArticle(@User("id") currentUserId: number, @Param("slug") slug: string): Promise<DeleteResult> {
     return await this.articleService.deleteArticle(slug, currentUserId);
   }
+
+  @Put(":slug")
+  @UseGuards(AuthGuard)
+  @UsePipes(new ValidationPipe())
+  async updateArticle(@User("id") currentUserId: number, @Param("slug") slug: string, @Body("article") updateArticleDto: CreateArticleDto): Promise<ArticleResponseInterface> {
+    const article = await this.articleService.updateArticle(slug, updateArticleDto, currentUserId);
+    return this.articleService.buildArticleResponse(article);
+  }
+
 }

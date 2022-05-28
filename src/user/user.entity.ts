@@ -27,6 +27,6 @@ export class UserEntity {
     this.password = await hash(this.password, 10);
   }
 
-  @OneToMany(()=> ArticleEntity, article => article.author) // один ко многим, так мы получим автора поста
+  @OneToMany(()=> ArticleEntity, article => article.author,) // один ко многим, так мы получим автора поста
   articles: ArticleEntity[]
 }
