@@ -34,7 +34,7 @@ export class ArticleEntity {
   updateTimeStamp() {
     this.updatedAt = new Date() // каждый раз когда мы обновляем запись, мы обновляем updatedAt и присваиваем туда новую дату
   }
-
-  @ManyToOne(()=> UserEntity, user => user.articles) // так мы получаем посты автора - в файле user.entity @OneToMany, который обяз нужно сделать
+                                                                                    //с постом получаем пользователя {eager: true}
+  @ManyToOne(()=> UserEntity, user => user.articles, {eager: true}) // так мы получаем посты автора - в файле user.entity @OneToMany, который обяз нужно сделать
   author: UserEntity
 }
