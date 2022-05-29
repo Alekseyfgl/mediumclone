@@ -22,17 +22,17 @@ export class AuthMiddleware implements NestMiddleware {
 
     //получаем токен из заголовка
     const token = req.headers.authorization.split(' ')[1];
-    console.log('token', token);
+    // console.log('token', token);
     //декодируем токен + try/catch для проверки на валидность токена
     try {
       const decode = verify(token, JWT_SECRET);
-      console.log('decode', decode);
+
       const user = await this.userService.findById(decode.id);
       req.user = user;
-      next();
+      console.log('req.user', req.user);
     } catch (e) {
       req.user = null;
-      next();
     }
+    next();
   }
 }

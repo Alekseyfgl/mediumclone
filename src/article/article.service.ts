@@ -3,14 +3,16 @@ import { UserEntity } from "@app/user/user.entity";
 import { CreateArticleDto } from "@app/article/dto/createArticle.dto";
 import { ArticleEntity } from "@app/article/article.entity";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DeleteResult, Repository } from "typeorm";
+import { DeleteResult, getRepository, Repository } from "typeorm";
 import { ArticleResponseInterface } from "@app/article/types/articleResponse.interface";
 import slugify from "slugify";
+import { ArticlesResponseInterface } from "@app/article/types/ArticlesResponse.interface";
 
 @Injectable()
 export class ArticleService {
 
-  constructor(@InjectRepository(ArticleEntity) private readonly articleRepository: Repository<ArticleEntity>) {
+  constructor(@InjectRepository(ArticleEntity) private readonly articleRepository: Repository<ArticleEntity>,
+              @InjectRepository(UserEntity) private readonly userRepository: Repository<UserEntity>) {
   }
 
 
@@ -68,9 +70,48 @@ export class ArticleService {
       throw new HttpException("You are not an author", HttpStatus.FORBIDDEN);
     }
 
-    Object.assign(article, updateArticleDto)
+    Object.assign(article, updateArticleDto);
 
-    return await this.articleRepository.save(article)
+    return await this.articleRepository.save(article);
+  }
+
+  async findAll(currentUserId: number, query: any): Promise<ArticlesResponseInterface> {
+    const queryBuilder = getRepository(ArticleEntity)
+      .createQueryBuilder("articles")
+      .leftJoinAndSelect("articles.author", "author");
+
+
+
+    queryBuilder.orderBy("articles.createdAt", "DESC"); //по какому полю делать сортировку
+    const articlesCount = await queryBuilder.getCount();
+
+    if(query.categories) {
+      queryBuilder.andWhere('articles.categoriesList LIKE :categories', {
+        categories: `${query.categories}`,
+      })
+    }
+
+    if (query.author) {
+      const author = await this.userRepository.findOne({
+        username: query.author
+      });
+      queryBuilder.andWhere("articles.authorId = :id", {
+        id: author.id
+      });
+    }
+
+    if (query.limit) {
+      queryBuilder.limit(query.limit); //делаем лимит
+    }
+
+    if (query.offset) {
+      queryBuilder.offset(query.offset); //делаем лимит
+    }
+
+    const articles = await queryBuilder.getMany();
+
+
+    return { articles, articlesCount };
   }
 
 }
