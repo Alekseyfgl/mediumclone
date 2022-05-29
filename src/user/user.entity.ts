@@ -1,6 +1,7 @@
-import { BeforeInsert, Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { BeforeInsert, Column, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { hash } from 'bcrypt';
 import { ArticleEntity } from "@app/article/article.entity";
+import { JoinTable } from "typeorm"; //Check your imports, it should be import {...} from 'typeorm'. Avoid imports from 'typeorm/browser'.
 
 @Entity({ name: 'users' })
 export class UserEntity {
@@ -27,6 +28,10 @@ export class UserEntity {
     this.password = await hash(this.password, 10);
   }
 
-  @OneToMany(()=> ArticleEntity, article => article.author,) // один ко многим, так мы получим автора поста
+  @OneToMany(()=> ArticleEntity, article => article.author) // один ко многим, так мы получим автора поста
   articles: ArticleEntity[]
+
+  @ManyToMany(()=> ArticleEntity)
+  @JoinTable() // нужен для создание 3 табл
+  favorites: ArticleEntity[];
 }

@@ -81,14 +81,13 @@ export class ArticleService {
       .leftJoinAndSelect("articles.author", "author");
 
 
-
     queryBuilder.orderBy("articles.createdAt", "DESC"); //по какому полю делать сортировку
     const articlesCount = await queryBuilder.getCount();
 
-    if(query.categories) {
-      queryBuilder.andWhere('articles.categoriesList LIKE :categories', {
-        categories: `${query.categories}`,
-      })
+    if (query.categories) {
+      queryBuilder.andWhere("articles.categoriesList LIKE :categories", {
+        categories: `${query.categories}`
+      });
     }
 
     if (query.author) {
@@ -110,8 +109,28 @@ export class ArticleService {
 
     const articles = await queryBuilder.getMany();
 
-
     return { articles, articlesCount };
+  }
+
+  async addArticleToFavorites(slug: string, currentUserId: number): Promise<ArticleEntity> {
+    const article = await this.findBySlug(slug);
+    const user = await this.userRepository.findOne(currentUserId, {
+      relations: ["favorites"]
+    });
+    console.log("----------user------", user);
+
+    //проверяем залайкан ли у нас пост
+    const isNotFavorited: boolean = user.favorites.findIndex(articleInFavorites => articleInFavorites.id === article.id) === -1;
+
+    //проверка залайкан ли этот пост
+    if (isNotFavorited) {
+      user.favorites.push(article);
+      article.favoritesCount++;
+      await this.userRepository.save(user);
+      await this.articleRepository.save(article);
+    }
+
+    return article;
   }
 
 }
