@@ -7,6 +7,7 @@ import { DeleteResult, getRepository, Repository } from "typeorm";
 import { ArticleResponseInterface } from "@app/article/types/articleResponse.interface";
 import slugify from "slugify";
 import { ArticlesResponseInterface } from "@app/article/types/ArticlesResponse.interface";
+import { log } from "util";
 
 @Injectable()
 export class ArticleService {
@@ -84,11 +85,13 @@ export class ArticleService {
     queryBuilder.orderBy("articles.createdAt", "DESC"); //по какому полю делать сортировку
     const articlesCount = await queryBuilder.getCount();
 
+
     if (query.categories) {
       queryBuilder.andWhere("articles.categoriesList LIKE :categories", {
-        categories: `${query.categories}`
+        categories: `%${query.categories}`
       });
     }
+
 
     if (query.author) {
       const author = await this.userRepository.findOne({
