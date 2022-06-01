@@ -85,14 +85,14 @@ export class ArticleService {
     queryBuilder.orderBy("articles.createdAt", "DESC"); //по какому полю делать сортировку
     const articlesCount = await queryBuilder.getCount();
 
-
+//если есть categories в query
     if (query.categories) {
       queryBuilder.andWhere("articles.categoriesList LIKE :categories", {
         categories: `%${query.categories}`
       });
     }
 
-
+//если есть автор в query
     if (query.author) {
       const author = await this.userRepository.findOne({
         username: query.author
@@ -102,10 +102,12 @@ export class ArticleService {
       });
     }
 
+    //если есть limit в query
     if (query.limit) {
       queryBuilder.limit(query.limit); //делаем лимит
     }
 
+    //если есть offset в query
     if (query.offset) {
       queryBuilder.offset(query.offset); //делаем лимит
     }
