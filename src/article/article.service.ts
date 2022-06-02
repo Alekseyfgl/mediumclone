@@ -76,14 +76,14 @@ export class ArticleService {
     return await this.articleRepository.save(article);
   }
 
+
+
+
   async findAll(currentUserId: number, query: any): Promise<ArticlesResponseInterface> {
     const queryBuilder = getRepository(ArticleEntity)
       .createQueryBuilder("articles")
       .leftJoinAndSelect("articles.author", "author");
 
-
-    queryBuilder.orderBy("articles.createdAt", "DESC"); //по какому полю делать сортировку
-    const articlesCount = await queryBuilder.getCount();
 
 //если есть categories в query
     if (query.categories) {
@@ -92,7 +92,7 @@ export class ArticleService {
       });
     }
 
-//если есть автор в query
+    //если есть автор в query
     if (query.author) {
       const author = await this.userRepository.findOne({
         username: query.author
@@ -101,6 +101,28 @@ export class ArticleService {
         id: author.id
       });
     }
+
+    //ищем какие посты залайкал user
+    if (query.favorited) {
+      //ищем автора при условии что такой существует, с массивом постов который он залайкал
+      const author: UserEntity = await this.userRepository.findOne({
+        username: query.favorited
+      }, {relations: ['favorites']});
+
+
+      //получаем id всех постов которые залайкал этот автор
+      const ids = author.favorites.map(article =>  article.id )
+
+      if (ids.length> 0) {
+        //проверяем у каждого article id и проверяем есть ли в массиве наших ids
+        queryBuilder.andWhere('articles.id IN (:...ids)', {ids})
+      } else {
+        queryBuilder.andWhere('1=0') // обрываем queryBuilder
+      }
+    }
+
+    queryBuilder.orderBy("articles.createdAt", "DESC"); //по какому полю делать сортировку
+    const articlesCount = await queryBuilder.getCount();
 
     //если есть limit в query
     if (query.limit) {
@@ -112,26 +134,40 @@ export class ArticleService {
       queryBuilder.offset(query.offset); //делаем лимит
     }
 
-    const articles = await queryBuilder.getMany();
+    //если мы не залогинены favoritedIds будет пустым
+    let favoriteIds: number[] = [];
 
-    return { articles, articlesCount };
+    if (currentUserId) {
+      const currentUser = await this.userRepository.findOne(currentUserId, {
+        relations: ['favorites'],
+      });
+      favoriteIds = currentUser.favorites.map((favorite) => favorite.id);
+    }
+
+    const articles = await queryBuilder.getMany();
+    const articlesWithFavorited = articles.map((article) => {
+      const favorited = favoriteIds.includes(article.id);
+      return { ...article, favorited };
+    });
+
+    return { articles: articlesWithFavorited, articlesCount };
   }
 
   async addArticleToFavorites(slug: string, currentUserId: number): Promise<ArticleEntity> {
     const article = await this.findBySlug(slug);
-    console.log('article=====>>>', article);
+    // console.log('article=====>>>', article);
 
     const user = await this.userRepository.findOne(currentUserId, {
       relations: ["favorites"]
     }); // здесь лежит user c favorites: [ArticleEntity, ArticleEntity] которые он залайкал
 
 
-    console.log("----------user------", user);
+    // console.log("----------user------", user);
     // console.log('authir ARTICLE ', );
 
     //проверяем залайкан ли у нас пост
     const isNotFavorited: boolean = user.favorites.findIndex(articleInFavorites => articleInFavorites.id === article.id) === -1;
-    console.log('isNotFavorited',isNotFavorited);
+    // console.log('isNotFavorited',isNotFavorited);
 
     //если пост не залайкан, то попадаем внутрь
     if (isNotFavorited) {
@@ -139,6 +175,27 @@ export class ArticleService {
       article.favoritesCount++; // кол-во людей которые залайкали наш article
       await this.userRepository.save(user); // сохраняем user
       await this.articleRepository.save(article); // сохраняем article
+    }
+
+    return article;
+  }
+
+
+  async deleteArticleFromFavorites(slug: string, userId: number): Promise<ArticleEntity> {
+    const article = await this.findBySlug(slug);
+    const user = await this.userRepository.findOne(userId, {
+      relations: ['favorites'],
+    });
+
+    const articleIndex = user.favorites.findIndex(
+      (articleInFavorites) => articleInFavorites.id === article.id,
+    );
+
+    if (articleIndex >= 0) {
+      user.favorites.splice(articleIndex, 1);
+      article.favoritesCount--;
+      await this.userRepository.save(user);
+      await this.articleRepository.save(article);
     }
 
     return article;
