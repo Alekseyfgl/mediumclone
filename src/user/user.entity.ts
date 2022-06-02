@@ -14,10 +14,10 @@ export class UserEntity {
   @Column()
   username: string;
 
-  @Column({ default: '' })
+  @Column({ default: null })
   bio: string;
 
-  @Column({ default: '' })
+  @Column({ default: null })
   image: string;
 
   @Column({ select: false }) //так мы исключаем пароль по умолчанию
@@ -33,5 +33,5 @@ export class UserEntity {
 
   @ManyToMany(()=> ArticleEntity)
   @JoinTable() // нужен для создание 3 табл
-  favorites: ArticleEntity[];
+  favorites: ArticleEntity[]; //favorites - поле с лайками и дизлайками
 }

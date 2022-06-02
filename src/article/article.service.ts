@@ -119,20 +119,26 @@ export class ArticleService {
 
   async addArticleToFavorites(slug: string, currentUserId: number): Promise<ArticleEntity> {
     const article = await this.findBySlug(slug);
+    console.log('article=====>>>', article);
+
     const user = await this.userRepository.findOne(currentUserId, {
       relations: ["favorites"]
-    });
+    }); // здесь лежит user c favorites: [ArticleEntity, ArticleEntity] которые он залайкал
+
+
     console.log("----------user------", user);
+    // console.log('authir ARTICLE ', );
 
     //проверяем залайкан ли у нас пост
     const isNotFavorited: boolean = user.favorites.findIndex(articleInFavorites => articleInFavorites.id === article.id) === -1;
+    console.log('isNotFavorited',isNotFavorited);
 
-    //проверка залайкан ли этот пост
+    //если пост не залайкан, то попадаем внутрь
     if (isNotFavorited) {
       user.favorites.push(article);
-      article.favoritesCount++;
-      await this.userRepository.save(user);
-      await this.articleRepository.save(article);
+      article.favoritesCount++; // кол-во людей которые залайкали наш article
+      await this.userRepository.save(user); // сохраняем user
+      await this.articleRepository.save(article); // сохраняем article
     }
 
     return article;
